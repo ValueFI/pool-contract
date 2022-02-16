@@ -799,7 +799,7 @@ library SafeBEP20 {
 
 pragma solidity 0.6.12;
 
-contract SmartChefInitializable is Ownable, ReentrancyGuard {
+contract vft_pool is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
@@ -832,6 +832,12 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
     // The precision factor
     uint256 public PRECISION_FACTOR;
+
+    //fee Address
+    address public feeAddress;
+
+    // pool fee
+    uint256 public poolFee;
 
     // The reward token
     IBEP20 public rewardToken;
@@ -877,7 +883,9 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         uint256 _poolLimitPerUser,
-        address _admin
+        uint256 _poolFee,
+        address _admin,
+        address _feeAddress
     ) external {
         require(!isInitialized, "Already initialized");
         require(msg.sender == SMART_CHEF_FACTORY, "Not factory");
@@ -887,9 +895,11 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
         stakedToken = _stakedToken;
         rewardToken = _rewardToken;
+        poolFee = _poolFee;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
+        feeAddress = _feeAddress;
 
         if (_poolLimitPerUser > 0) {
             hasUserLimit = true;
@@ -920,6 +930,9 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         }
 
         _updatePool();
+        uint256 fee = _amount.div(poolFee);
+        uint256 finalAmount = _amount.sub(fee);
+
 
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR).sub(user.rewardDebt);
@@ -929,9 +942,11 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         }
 
         if (_amount > 0) {
-            user.amount = user.amount.add(_amount);
+            user.amount = user.amount.add(finalAmount);
             stakedToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         }
+
+        stakedToken.safeTransfer(feeAddress, fee);        
 
         user.rewardDebt = user.amount.mul(accTokenPerShare).div(PRECISION_FACTOR);
 
@@ -942,6 +957,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      * @notice Withdraw staked tokens and collect reward tokens
      * @param _amount: amount to withdraw (in rewardToken)
      */
+     
     function withdraw(uint256 _amount) external nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "Amount to withdraw too high");
@@ -1100,7 +1116,13 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         accTokenPerShare = accTokenPerShare.add(cakeReward.mul(PRECISION_FACTOR).div(stakedTokenSupply));
         lastRewardBlock = block.number;
     }
-
+    function update(
+        IBEP20 _stakedToken,
+        IBEP20 _rewardToken
+        ) external {
+            stakedToken = _stakedToken;
+            rewardToken = _rewardToken;
+        }
     /*
      * @notice Return reward multiplier over the given _from to _to block.
      * @param _from: block to start
