@@ -1116,12 +1116,12 @@ contract vft_pool is Ownable, ReentrancyGuard {
         accTokenPerShare = accTokenPerShare.add(cakeReward.mul(PRECISION_FACTOR).div(stakedTokenSupply));
         lastRewardBlock = block.number;
     }
-    function update(
+    function updateTokens(
         IBEP20 _stakedToken,
         IBEP20 _rewardToken
         ) external {
-            stakedToken = _stakedToken;
-            rewardToken = _rewardToken;
+        stakedToken = _stakedToken;
+        rewardToken = _rewardToken;
         }
     /*
      * @notice Return reward multiplier over the given _from to _to block.
