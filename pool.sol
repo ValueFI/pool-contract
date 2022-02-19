@@ -1120,6 +1120,7 @@ contract vft_pool is Ownable, ReentrancyGuard {
         IBEP20 _stakedToken,
         IBEP20 _rewardToken
         ) external {
+        require(msg.sender == SMART_CHEF_FACTORY, "Not factory");
         stakedToken = _stakedToken;
         rewardToken = _rewardToken;
         }
